@@ -114,13 +114,14 @@ unset __conda_setup
 # <<< conda initialize <<<
 
 [ -e "/usr/local/nvidia/lib64/libcuda.so.1" ] && [ ! -e "/usr/local/nvidia/lib64/libcuda.so" ] && ln -s "/usr/local/nvidia/lib64/libcuda.so.1" "/usr/local/nvidia/lib64/libcuda.so"
-source /devmachine/bin/sensecore.sh
-scc_upgrade 2>/dev/null
+# source /devmachine/bin/sensecore.sh
+# scc_upgrade 2>/dev/null
 
-
-if [ -f ~/.myenv_config ]; then
-    source ~/.myenv_config_hsh
-
+SCRIPT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
+CONFIG_FILE="$SCRIPT_DIR/.env_config_hsh"
+echo "$CONFIG_FILE"
+if [ -f "$CONFIG_FILE" ]; then
+    source "$CONFIG_FILE"
     function proxy_on() {
         export http_proxy="http://${PROXY_USER}:${PROXY_PASS}@${PROXY_HOST}:${PROXY_PORT}"
         export https_proxy="http://${PROXY_USER}:${PROXY_PASS}@${PROXY_HOST}:${PROXY_PORT}"
