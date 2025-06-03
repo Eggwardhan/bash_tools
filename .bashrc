@@ -123,8 +123,13 @@ echo "$CONFIG_FILE"
 if [ -f "$CONFIG_FILE" ]; then
     source "$CONFIG_FILE"
     function proxy_on() {
-        export http_proxy="http://${PROXY_USER}:${PROXY_PASS}@${PROXY_HOST}:${PROXY_PORT}"
-        export https_proxy="http://${PROXY_USER}:${PROXY_PASS}@${PROXY_HOST}:${PROXY_PORT}"
+        if [ -n "$PROXY_USER" ] && [ -n "$PROXY_PASS" ]; then
+            export http_proxy="http://${PROXY_USER}:${PROXY_PASS}@${PROXY_HOST}:${PROXY_PORT}"
+            export https_proxy="http://${PROXY_USER}:${PROXY_PASS}@${PROXY_HOST}:${PROXY_PORT}"
+        else
+            export http_proxy="http://${PROXY_HOST}:${PROXY_PORT}"
+            export https_proxy="http://${PROXY_HOST}:${PROXY_PORT}"
+        fi
         export no_proxy="${NO_PROXY}"
         echo -e "\033[32m[√] 已开启代理\033[0m"
     }
