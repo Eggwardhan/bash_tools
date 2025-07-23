@@ -4,7 +4,61 @@
 # 适用对象：Python、pip、Ubuntu APT、Node.js 和 Conda 用户。
 # 注意事项：chsrc 是第三方工具，请确保信任其来源；系统级更改（如 APT）需管理员权限。
 
-curl https://chsrc.run/posix | sudo bash
+# curl https://chsrc.run/posix | sudo bash
+# 如果失败了运行
+#!/usr/bin/env bash
+
+set -e
+
+OS="$(uname -s)"
+ARCH="$(uname -m)"
+VERSION="${1:-pre}"  # 默认版本为 pre
+
+echo "🛠️ 安装 chsrc（版本: $VERSION）"
+echo "🔍 操作系统: $OS"
+echo "🔍 架构: $ARCH"
+
+install_windows() {
+  echo "📥 Windows 环境，使用 PowerShell 安装 chsrc（Gitee 镜像）..."
+  powershell.exe -NoProfile -Command \
+    "& { iwr -useb https://gitee.com/RubyMetric/chsrc/raw/main/tool/installer.ps1 | iex } -Version $VERSION"
+}
+
+install_macos_or_linux() {
+  echo "📥 macOS/Linux 环境，使用 Gitee 安装脚本..."
+
+  INSTALL_URL="https://gitee.com/RubyMetric/chsrc/raw/main/tool/installer.sh"
+
+  if [ "$EUID" -eq 0 ]; then
+    bash -c "curl -fsSL $INSTALL_URL | bash -s -- -v $VERSION"
+  else
+    bash -c "curl -fsSL $INSTALL_URL | bash -s -- -v $VERSION"
+  fi
+}
+
+# 判断平台
+case "$OS" in
+  Linux)
+    if grep -qi microsoft /proc/version; then
+      install_windows  # Windows Subsystem for Linux
+    else
+      install_macos_or_linux
+    fi
+    ;;
+  Darwin)
+    install_macos_or_linux
+    ;;
+  MINGW*|MSYS*|CYGWIN*)
+    install_windows
+    ;;
+  *)
+    echo "❌ 不支持的操作系统: $OS"
+    exit 1
+    ;;
+esac
+
+echo "✅ chsrc 安装完成。可运行 chsrc -h 查看命令。"
+
 
 chsrc set python 
 chsrc set pip
