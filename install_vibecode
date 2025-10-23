@@ -1,0 +1,158 @@
+#!/bin/bash
+
+# CodeX & ClaudeCode 一键安装脚本 for Linux (中国镜像优化版)
+set -e  # 遇到错误立即退出
+
+echo "开始安装 CodeX 和 ClaudeCode..."
+echo "使用中国镜像源优化下载速度..."
+
+# 配置中国镜像源
+setup_china_mirrors() {
+    # 配置 npm 淘宝镜像
+    npm config set registry https://registry.npmmirror.com    
+    echo "✓ npm 镜像已配置为淘宝镜像"
+}
+
+# 安装最新版 Node.js
+install_latest_node() {
+    echo "正在安装最新版 Node.js..."
+    
+    # 清理可能的旧版本
+    sudo apt-get remove -y nodejs npm
+    sudo apt-get autoremove -y
+    
+    # 安装 curl 和必要的工具
+    sudo apt-get update
+    sudo apt-get install -y curl git build-essential
+    
+    # 使用 NodeSource 安装最新 LTS 版本
+    curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+    sudo apt-get install -y nodejs
+    
+    # 验证安装
+    NODE_VERSION=$(node -v)
+    NPM_VERSION=$(npm -v)
+    echo "✓ Node.js $NODE_VERSION 安装完成"
+    echo "✓ npm $NPM_VERSION 安装完成"
+}
+
+# 安装 CodeX
+install_codex() {
+    echo "开始安装 CodeX..."
+    
+    # 使用淘宝镜像安装 CodeX CLI
+    npm install -g @openai/codex --registry=https://registry.npmmirror.com
+    
+    # 创建配置目录
+    CONFIG_DIR="$HOME/.codex"
+    mkdir -p "$CONFIG_DIR"
+    # 创建 config.toml 配置文件
+    CONFIG_FILE="$CONFIG_DIR/config.toml"
+    cat > "$CONFIG_FILE" << EOF
+disable_response_storage = true
+model_provider ="crs"
+model="gpt-5-codex"
+model_reasoning_effort = "high"
+preferred_auth_method ="apikey"
+[model_providers.crs]
+name = "crs"
+base_url="https://claude.doffe.cn/openai"
+wire_api ="responses"
+requires_openai_auth = true
+env_key ="OPENAI_API_KEY"
+EOF
+    echo "✓ CodeX 安装完成"
+}
+setup_environment_variables() {
+    local bashrc_file="$HOME/.bashrc"
+    local env_marker="# AI Tools Environment Variables"
+    
+    echo "配置环境变量到 $bashrc_file ..."
+    
+    # 检查是否已经配置过
+    if grep -q "$env_marker" "$bashrc_file" 2>/dev/null; then
+        echo "✓ 环境变量已存在，跳过配置"
+        return
+    fi
+    
+    # 添加环境变量配置
+    cat >> "$bashrc_file" << EOF
+
+$env_marker
+# OpenAI CodeX 配置
+export OPENAI_API_KEY=""
+export OPENAI_BASE_URL="https://claude.doffe.cn/openai"
+# Anthropic ClaudeCode 配置  
+export ANTHROPIC_API_KEY=""
+
+export ANTHROPIC_BASE_URL="https://sensecode.api.sensetime.com"
+EOF
+
+    echo "✓ 环境变量已添加到 $bashrc_file"
+    echo "⚠️  请记得编辑 $bashrc_file 并填入真实的 API Keys"
+}
+
+
+# 安装 ClaudeCode
+install_claudecode() {
+    echo "开始安装 ClaudeCode..."
+    
+    # 使用淘宝镜像安装 ClaudeCode
+    # 注意：ClaudeCode 可能有不同的包名，这里假设是 @anthropic-ai/claudecode
+    # 如果包名不对，请根据实际情况调整
+    npm install -g @anthropic-ai/claude-code
+    
+    
+    echo "✓ ClaudeCode 安装完成"
+}
+
+# 安装 pnpm (可选，但推荐用于更好的包管理)
+install_pnpm() {
+    echo "安装 pnpm (快速包管理器)..."
+    npm install -g pnpm --registry=https://registry.npmmirror.com
+    pnpm config set registry https://registry.npmmirror.com
+    echo "✓ pnpm 安装完成"
+}
+
+# 主安装流程
+main() {
+    echo "========================================"
+    echo "CodeX & ClaudeCode 一键安装脚本"
+    echo "优化中国用户使用体验"
+    echo "========================================"
+    
+    # 配置镜像源
+    
+    # 检查 Node.js
+    if command -v node &> /dev/null; then
+        CURRENT_NODE_VERSION=$(node -v)
+        echo "当前 Node.js 版本: $CURRENT_NODE_VERSION"
+        read -p "是否重新安装最新版 Node.js? (y/N): " reinstall_node
+        if [[ $reinstall_node =~ ^[Yy]$ ]]; then
+            install_latest_node
+        else
+            echo "使用现有 Node.js 版本"
+        fi
+    else
+        install_latest_node
+    fi
+    setup_china_mirrors
+    # 安装 pnpm
+    install_pnpm
+    
+    # 安装 CodeX
+    install_codex
+    
+    # 安装 ClaudeCode
+    install_claudecode
+    setup_environment_variables
+    # 显示安装总结
+    echo ""
+    echo "========================================"
+    echo "🎉 安装完成！"
+    echo "========================================"
+}
+
+# 运行主函数
+main "$@"
+
