@@ -1,5 +1,5 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
-CONFIG_FILE="$SCRIPT_DIR/.env_config_sensecore"
+CONFIG_FILE="$SCRIPT_DIR/.env_config_mzl"
 cat << EOF >> ~/.bashrc
 
 CONFIG_FILE="$CONFIG_FILE"

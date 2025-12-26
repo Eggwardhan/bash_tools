@@ -85,7 +85,7 @@ export OPENAI_BASE_URL="https://claude.doffe.cn/openai"
 # Anthropic ClaudeCode 配置  
 export ANTHROPIC_API_KEY=""
 
-export ANTHROPIC_BASE_URL="https://sensecode.api.sensetime.com"
+export ANTHROPIC_BASE_URL="http://106.15.7.100:5000"
 EOF
 
     echo "✓ 环境变量已添加到 $bashrc_file"
@@ -93,16 +93,53 @@ EOF
 }
 
 
+# 配置 ClaudeCode 完成引导状态
+configure_claude_onboarding() {
+    echo "配置 ClaudeCode 引导状态..."
+
+    CLAUDE_CONFIG="$HOME/.claude.json"
+
+    # 检查文件是否存在
+    if [ -f "$CLAUDE_CONFIG" ]; then
+        # 使用 jq 添加或更新 hasCompletedOnboarding 字段
+        if command -v jq &> /dev/null; then
+            # 使用 jq 修改
+            jq '. + {"hasCompletedOnboarding": true}' "$CLAUDE_CONFIG" > "$CLAUDE_CONFIG.tmp"
+            mv "$CLAUDE_CONFIG.tmp" "$CLAUDE_CONFIG"
+            echo "✓ 使用 jq 更新 ~/.claude.json"
+        else
+            # 使用 Node.js 修改
+            node -e "
+                const fs = require('fs');
+                const config = JSON.parse(fs.readFileSync('$CLAUDE_CONFIG', 'utf8'));
+                config.hasCompletedOnboarding = true;
+                fs.writeFileSync('$CLAUDE_CONFIG', JSON.stringify(config, null, 2));
+            "
+            echo "✓ 使用 Node.js 更新 ~/.claude.json"
+        fi
+    else
+        # 创建新文件
+        cat > "$CLAUDE_CONFIG" << EOF
+{
+  "hasCompletedOnboarding": true
+}
+EOF
+        echo "✓ ~/.claude.json 已创建并配置"
+    fi
+}
+
 # 安装 ClaudeCode
 install_claudecode() {
     echo "开始安装 ClaudeCode..."
-    
+
     # 使用淘宝镜像安装 ClaudeCode
     # 注意：ClaudeCode 可能有不同的包名，这里假设是 @anthropic-ai/claudecode
     # 如果包名不对，请根据实际情况调整
     npm install -g @anthropic-ai/claude-code
-    
-    
+
+    # 配置引导状态
+    configure_claude_onboarding
+
     echo "✓ ClaudeCode 安装完成"
 }
 
