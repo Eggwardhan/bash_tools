@@ -63,18 +63,56 @@ env_key ="OPENAI_API_KEY"
 EOF
     echo "✓ CodeX 安装完成"
 }
+# 安装 Google Gemini CLI 工具
+install_gemini() {
+    echo "开始安装 Google Gemini 相关工具..."
+
+    # 安装 Google 官方的 Gemini CLI 工具（如果有）
+    # 目前 Google 官方主要提供 Python SDK，但有一些社区开发的 CLI 工具
+    # 尝试安装社区维护的 Gemini CLI 工具
+    if npm view @google/generative-ai 2>/dev/null; then
+        echo "安装 Google Generative AI npm 包..."
+        npm install -g @google/generative-ai --registry=https://registry.npmmirror.com
+        echo "✓ @google/generative-ai 安装完成"
+    else
+        echo "⚠️  @google/generative-ai 包未找到，尝试安装其他 Gemini 相关工具"
+    fi
+
+    # 检查是否有其他可用的 Gemini CLI 工具
+    if npm view gemini-cli 2>/dev/null; then
+        echo "安装 gemini-cli 工具..."
+        npm install -g gemini-cli --registry=https://registry.npmmirror.com
+        echo "✓ gemini-cli 安装完成"
+    else
+        echo "⚠️  未找到合适的 Gemini CLI 工具，您可以通过 npm search gemini 查找更多选项"
+    fi
+
+    # 同时安装 Python SDK（可选，但推荐）
+    echo "检查并安装 Python 相关包..."
+    if command -v pip &> /dev/null; then
+        pip install google-generativeai --index-url https://pypi.tuna.tsinghua.edu.cn/simple
+        echo "✓ google-generativeai Python 包安装完成"
+    elif command -v uv &> /dev/null; then
+        uv pip install google-generativeai --index-url https://pypi.tuna.tsinghua.edu.cn/simple
+        echo "✓ google-generativeai Python 包安装完成"
+    fi
+
+    echo "✓ Google Gemini 相关工具安装完成"
+}
+
+# 配置环境变量
 setup_environment_variables() {
     local bashrc_file="$HOME/.bashrc"
     local env_marker="# AI Tools Environment Variables"
-    
+
     echo "配置环境变量到 $bashrc_file ..."
-    
+
     # 检查是否已经配置过
     if grep -q "$env_marker" "$bashrc_file" 2>/dev/null; then
         echo "✓ 环境变量已存在，跳过配置"
         return
     fi
-    
+
     # 添加环境变量配置
     cat >> "$bashrc_file" << EOF
 
@@ -82,10 +120,12 @@ $env_marker
 # OpenAI CodeX 配置
 export OPENAI_API_KEY=""
 export OPENAI_BASE_URL="https://claude.doffe.cn/openai"
-# Anthropic ClaudeCode 配置  
+# Anthropic ClaudeCode 配置
 export ANTHROPIC_API_KEY=""
-
 export ANTHROPIC_BASE_URL="http://106.15.7.100:5000"
+# Google Gemini 配置
+export GOOGLE_API_KEY=""
+
 EOF
 
     echo "✓ 环境变量已添加到 $bashrc_file"
