@@ -67,24 +67,22 @@ EOF
 install_gemini() {
     echo "开始安装 Google Gemini 相关工具..."
 
-    # 安装 Google 官方的 Gemini CLI 工具（如果有）
-    # 目前 Google 官方主要提供 Python SDK，但有一些社区开发的 CLI 工具
-    # 尝试安装社区维护的 Gemini CLI 工具
+    # 安装 Google 官方的 Gemini CLI 工具
+    if npm view @google/gemini-cli 2>/dev/null; then
+        echo "安装 Google 官方 Gemini CLI 工具..."
+        npm install -g @google/gemini-cli --registry=https://registry.npmmirror.com
+        echo "✓ @google/gemini-cli 安装完成"
+    else
+        echo "⚠️  @google/gemini-cli 包未找到"
+    fi
+
+    # 安装 Google Generative AI SDK
     if npm view @google/generative-ai 2>/dev/null; then
         echo "安装 Google Generative AI npm 包..."
         npm install -g @google/generative-ai --registry=https://registry.npmmirror.com
         echo "✓ @google/generative-ai 安装完成"
     else
-        echo "⚠️  @google/generative-ai 包未找到，尝试安装其他 Gemini 相关工具"
-    fi
-
-    # 检查是否有其他可用的 Gemini CLI 工具
-    if npm view gemini-cli 2>/dev/null; then
-        echo "安装 gemini-cli 工具..."
-        npm install -g gemini-cli --registry=https://registry.npmmirror.com
-        echo "✓ gemini-cli 安装完成"
-    else
-        echo "⚠️  未找到合适的 Gemini CLI 工具，您可以通过 npm search gemini 查找更多选项"
+        echo "⚠️  @google/generative-ai 包未找到"
     fi
 
     # 同时安装 Python SDK（可选，但推荐）
@@ -216,12 +214,16 @@ main() {
     setup_china_mirrors
     # 安装 pnpm
     install_pnpm
-    
+
     # 安装 CodeX
     install_codex
-    
+
     # 安装 ClaudeCode
     install_claudecode
+
+    # 安装 Google Gemini
+    install_gemini
+
     setup_environment_variables
     # 显示安装总结
     echo ""
