@@ -1,10 +1,24 @@
 #!/bin/bash
 
-# CodeX & ClaudeCode 一键安装脚本 for Linux (中国镜像优化版)
+# CodeX & ClaudeCode 一键安装脚本 for Linux & macOS (中国镜像优化版)
 set -e  # 遇到错误立即退出
 
 echo "开始安装 CodeX 和 ClaudeCode..."
 echo "使用中国镜像源优化下载速度..."
+
+# 检测操作系统类型
+detect_os() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        OS_TYPE="macos"
+        echo "检测到操作系统: macOS"
+    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        OS_TYPE="linux"
+        echo "检测到操作系统: Linux"
+    else
+        echo "错误: 不支持的操作系统 ($OSTYPE)"
+        exit 1
+    fi
+}
 
 # 配置中国镜像源
 setup_china_mirrors() {
@@ -16,19 +30,35 @@ setup_china_mirrors() {
 # 安装最新版 Node.js
 install_latest_node() {
     echo "正在安装最新版 Node.js..."
-    
-    # 清理可能的旧版本
-    sudo apt-get remove -y nodejs npm
-    sudo apt-get autoremove -y
-    
-    # 安装 curl 和必要的工具
-    sudo apt-get update
-    sudo apt-get install -y curl git build-essential
-    
-    # 使用 NodeSource 安装最新 LTS 版本
-    curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
-    sudo apt-get install -y nodejs
-    
+
+    if [ "$OS_TYPE" == "linux" ]; then
+        # 清理可能的旧版本
+        sudo apt-get remove -y nodejs npm
+        sudo apt-get autoremove -y
+
+        # 安装 curl 和必要的工具
+        sudo apt-get update
+        sudo apt-get install -y curl git build-essential
+
+        # 使用 NodeSource 安装最新 LTS 版本
+        curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+        sudo apt-get install -y nodejs
+    elif [ "$OS_TYPE" == "macos" ]; then
+        # 检查 Homebrew 是否安装
+        if ! command -v brew &> /dev/null; then
+            echo "正在安装 Homebrew..."
+            /bin/bash -c "$(curl -fsSL https://gitee.com/ineo6/homebrew-install/raw/master/install.sh)"
+            # 配置 Homebrew 环境变量
+            echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zshrc
+            eval "$(/opt/homebrew/bin/brew shellenv)"
+        fi
+
+        # Homebrew 会自动处理 Node.js 的升级和替换，无需手动卸载旧版本
+        echo "使用 Homebrew 安装/升级 Node.js..."
+        brew update
+        brew install node
+    fi
+
     # 验证安装
     NODE_VERSION=$(node -v)
     NPM_VERSION=$(npm -v)
@@ -100,19 +130,32 @@ install_gemini() {
 
 # 配置环境变量
 setup_environment_variables() {
-    local bashrc_file="$HOME/.bashrc"
+    # 根据操作系统确定配置文件
+    if [ "$OS_TYPE" == "linux" ]; then
+        local config_file="$HOME/.bashrc"
+    elif [ "$OS_TYPE" == "macos" ]; then
+        # macOS 优先使用 .zshrc (默认 Shell)，如果不存在则检查 .bash_profile
+        if [ -f "$HOME/.zshrc" ]; then
+            local config_file="$HOME/.zshrc"
+        elif [ -f "$HOME/.bash_profile" ]; then
+            local config_file="$HOME/.bash_profile"
+        else
+            local config_file="$HOME/.bashrc"  # 备用
+        fi
+    fi
+
     local env_marker="# AI Tools Environment Variables"
 
-    echo "配置环境变量到 $bashrc_file ..."
+    echo "配置环境变量到 $config_file ..."
 
     # 检查是否已经配置过
-    if grep -q "$env_marker" "$bashrc_file" 2>/dev/null; then
+    if grep -q "$env_marker" "$config_file" 2>/dev/null; then
         echo "✓ 环境变量已存在，跳过配置"
         return
     fi
 
     # 添加环境变量配置
-    cat >> "$bashrc_file" << EOF
+    cat >> "$config_file" << EOF
 
 $env_marker
 # OpenAI CodeX 配置
@@ -126,8 +169,8 @@ export GOOGLE_API_KEY=""
 
 EOF
 
-    echo "✓ 环境变量已添加到 $bashrc_file"
-    echo "⚠️  请记得编辑 $bashrc_file 并填入真实的 API Keys"
+    echo "✓ 环境变量已添加到 $config_file"
+    echo "⚠️  请记得编辑 $config_file 并填入真实的 API Keys"
 }
 
 
@@ -195,9 +238,12 @@ main() {
     echo "CodeX & ClaudeCode 一键安装脚本"
     echo "优化中国用户使用体验"
     echo "========================================"
-    
+
+    # 检测操作系统
+    detect_os
+
     # 配置镜像源
-    
+
     # 检查 Node.js
     if command -v node &> /dev/null; then
         CURRENT_NODE_VERSION=$(node -v)
