@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # CodeX & ClaudeCode 一键安装脚本 for Linux & macOS (中国镜像优化版)
-set -e  # 遇到错误立即退出
+# 注意：每个函数即使失败也会继续执行后续步骤
 
 echo "开始安装 CodeX 和 ClaudeCode..."
 echo "使用中国镜像源优化下载速度..."
@@ -71,26 +71,50 @@ install_codex() {
     echo "开始安装 CodeX..."
     
     # 使用淘宝镜像安装 CodeX CLI
-    npm install -g @openai/codex --registry=https://registry.npmmirror.com
-    
+    if npm install -g @openai/codex --registry=https://registry.npmmirror.com 2>/dev/null; then
+        echo "✓ CodeX CLI 安装成功"
+    else
+        echo "⚠️  CodeX CLI 已存在或安装失败，继续配置..."
+    fi
+
     # 创建配置目录
     CONFIG_DIR="$HOME/.codex"
     mkdir -p "$CONFIG_DIR"
+
     # 创建 config.toml 配置文件
     CONFIG_FILE="$CONFIG_DIR/config.toml"
-    cat > "$CONFIG_FILE" << EOF
+    cat > "$CONFIG_FILE" <<'EOF'
+ask_for_approval = "never"
+sandbox = "workspace-write"
+skip_git_repo_check = true
 disable_response_storage = true
-model_provider ="crs"
-model="gpt-5-codex"
-model_reasoning_effort = "high"
-preferred_auth_method ="apikey"
+model_provider = "crs"
+model = "gpt-5.2"
+model_reasoning_effort = "xhigh"
+preferred_auth_method = "apikey"
+
 [model_providers.crs]
 name = "crs"
-base_url="https://claude.doffe.cn/openai"
-wire_api ="responses"
+base_url = "https://claude.doffe.cn/openai"
+wire_api = "responses"
 requires_openai_auth = true
-env_key ="OPENAI_API_KEY"
+env_key = "OPENAI_API_KEY"
 EOF
+    echo "✓ config.toml 已创建"
+
+    # 提示用户输入 API Key
+    echo ""
+    echo "请输入 OPENAI_API_KEY:"
+    read -r OPENAI_KEY
+
+    # 创建 auth.json 配置文件
+    AUTH_FILE="$CONFIG_DIR/auth.json"
+    cat > "$AUTH_FILE" <<EOF
+{
+  "OPENAI_API_KEY": "$OPENAI_KEY"
+}
+EOF
+    echo "✓ auth.json 已创建"
     echo "✓ CodeX 安装完成"
 }
 # 安装 Google Gemini CLI 工具
@@ -100,8 +124,11 @@ install_gemini() {
     # 安装 Google 官方的 Gemini CLI 工具
     if npm view @google/gemini-cli 2>/dev/null; then
         echo "安装 Google 官方 Gemini CLI 工具..."
-        npm install -g @google/gemini-cli --registry=https://registry.npmmirror.com
-        echo "✓ @google/gemini-cli 安装完成"
+        if npm install -g @google/gemini-cli --registry=https://registry.npmmirror.com 2>/dev/null; then
+            echo "✓ @google/gemini-cli 安装完成"
+        else
+            echo "⚠️  @google/gemini-cli 安装失败，继续..."
+        fi
     else
         echo "⚠️  @google/gemini-cli 包未找到"
     fi
@@ -109,8 +136,11 @@ install_gemini() {
     # 安装 Google Generative AI SDK
     if npm view @google/generative-ai 2>/dev/null; then
         echo "安装 Google Generative AI npm 包..."
-        npm install -g @google/generative-ai --registry=https://registry.npmmirror.com
-        echo "✓ @google/generative-ai 安装完成"
+        if npm install -g @google/generative-ai --registry=https://registry.npmmirror.com 2>/dev/null; then
+            echo "✓ @google/generative-ai 安装完成"
+        else
+            echo "⚠️  @google/generative-ai 安装失败，继续..."
+        fi
     else
         echo "⚠️  @google/generative-ai 包未找到"
     fi
@@ -118,11 +148,17 @@ install_gemini() {
     # 同时安装 Python SDK（可选，但推荐）
     echo "检查并安装 Python 相关包..."
     if command -v pip &> /dev/null; then
-        pip install google-generativeai --index-url https://pypi.tuna.tsinghua.edu.cn/simple
-        echo "✓ google-generativeai Python 包安装完成"
+        if pip install google-generativeai --index-url https://pypi.tuna.tsinghua.edu.cn/simple 2>/dev/null; then
+            echo "✓ google-generativeai Python 包安装完成"
+        else
+            echo "⚠️  google-generativeai Python 包安装失败，继续..."
+        fi
     elif command -v uv &> /dev/null; then
-        uv pip install google-generativeai --index-url https://pypi.tuna.tsinghua.edu.cn/simple
-        echo "✓ google-generativeai Python 包安装完成"
+        if uv pip install google-generativeai --index-url https://pypi.tuna.tsinghua.edu.cn/simple 2>/dev/null; then
+            echo "✓ google-generativeai Python 包安装完成"
+        else
+            echo "⚠️  google-generativeai Python 包安装失败，继续..."
+        fi
     fi
 
     echo "✓ Google Gemini 相关工具安装完成"
@@ -162,8 +198,8 @@ $env_marker
 export OPENAI_API_KEY=""
 export OPENAI_BASE_URL="https://claude.doffe.cn/openai"
 # Anthropic ClaudeCode 配置
-export ANTHROPIC_API_KEY=""
-export ANTHROPIC_BASE_URL="http://106.15.7.100:5000"
+export ANTHROPIC_BASE_URL="https://claude.doffe.cn/api"
+export ANTHROPIC_AUTH_TOKEN="cr_c024c04500b6e134f818dd57e92a61e61cf32adb0c8e72b77abfeebc45c4be63"
 # Google Gemini 配置
 export GOOGLE_API_KEY=""
 
@@ -216,7 +252,11 @@ install_claudecode() {
     # 使用淘宝镜像安装 ClaudeCode
     # 注意：ClaudeCode 可能有不同的包名，这里假设是 @anthropic-ai/claudecode
     # 如果包名不对，请根据实际情况调整
-    npm install -g @anthropic-ai/claude-code
+    if npm install -g @anthropic-ai/claude-code 2>/dev/null; then
+        echo "✓ ClaudeCode CLI 安装成功"
+    else
+        echo "⚠️  ClaudeCode CLI 已存在或安装失败，继续配置..."
+    fi
 
     # 配置引导状态
     configure_claude_onboarding
@@ -227,9 +267,12 @@ install_claudecode() {
 # 安装 pnpm (可选，但推荐用于更好的包管理)
 install_pnpm() {
     echo "安装 pnpm (快速包管理器)..."
-    npm install -g pnpm --registry=https://registry.npmmirror.com
-    pnpm config set registry https://registry.npmmirror.com
-    echo "✓ pnpm 安装完成"
+    if npm install -g pnpm --registry=https://registry.npmmirror.com 2>/dev/null; then
+        pnpm config set registry https://registry.npmmirror.com 2>/dev/null || true
+        echo "✓ pnpm 安装完成"
+    else
+        echo "⚠️  pnpm 已存在或安装失败，继续..."
+    fi
 }
 
 # 主安装流程
